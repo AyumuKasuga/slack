@@ -58,6 +58,7 @@ type Client struct {
 	// Dialer.
 	dialer *websocket.Dialer
 
-	debug bool
-	log   ilogger
+	debug           bool
+	debugReconnects bool
+	log             ilogger
 }

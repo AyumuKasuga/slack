@@ -3,6 +3,7 @@ package socketmode
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 	"time"
 
@@ -65,7 +66,21 @@ func (smc *Client) Open() (info *slack.SocketModeConnection, websocketURL string
 //
 // To have a fully managed Websocket connection, use `New`, and call `Run()` on it.
 func (smc *Client) OpenContext(ctx context.Context) (info *slack.SocketModeConnection, websocketURL string, err error) {
-	return smc.StartSocketModeContext(ctx)
+	info, origURL, err := smc.StartSocketModeContext(ctx)
+	if err != nil {
+		return info, origURL, err
+	}
+	if smc.debugReconnects {
+		u, e := url.Parse(origURL)
+		if e != nil {
+			return info, origURL, e
+		}
+		q := u.Query()
+		q.Set("debug_reconnects", "true")
+		u.RawQuery = q.Encode()
+		return info, u.String(), nil
+	}
+	return info, origURL, err
 }
 
 // Option options for the managed Client.
@@ -92,6 +107,15 @@ func OptionPingInterval(d time.Duration) Option {
 func OptionDebug(b bool) func(*Client) {
 	return func(c *Client) {
 		c.debug = b
+	}
+}
+
+// OptionDebugReconnects adds `&debug_reconnects=true` to the WebSocket URL
+// in order to make the connection time significantly shorter (360 seconds).
+// That way, you can test and debug reconnects without waiting around.
+func OptionDebugReconnects(b bool) func(*Client) {
+	return func(c *Client) {
+		c.debugReconnects = b
 	}
 }
 
